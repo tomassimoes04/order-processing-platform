@@ -1,25 +1,23 @@
 package pt.unl.fct.iadi.orderprocessingplatform.domain
 
-import java.math.BigDecimal
 import java.time.Instant
 
 data class Order(
     val id: String,
-    val items: List<OrderItem>, // Items must come second
-    val userId: String,        // UserID must come third
+    val items: List<OrderItem>,
+    val userId: String,
     val createdAt: Instant = Instant.now()
 ) {
-    // OrderItem must be a nested class inside Order
     data class OrderItem(
         val productId: String,
         val quantity: Int,
-        val price: BigDecimal
+        val price: Double
     )
 }
 
 data class PaymentRequest(
     val orderId: String,
-    val amount: BigDecimal
+    val amount: Double
 )
 
 enum class ReceiptStatus {
