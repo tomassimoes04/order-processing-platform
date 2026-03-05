@@ -6,10 +6,9 @@ import pt.unl.fct.iadi.orderprocessingplatform.domain.Order
 import pt.unl.fct.iadi.orderprocessingplatform.domain.PaymentRequest
 import pt.unl.fct.iadi.orderprocessingplatform.payment.PaymentGateway
 import pt.unl.fct.iadi.orderprocessingplatform.pricing.PriceCalculator
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.math.round
 
 @Component
 class OrderProcessor(
@@ -18,10 +17,11 @@ class OrderProcessor(
 ) : CommandLineRunner {
 
     fun processOrder(order: Order): List<String> {
-        val output = mutableListOf<String>()
         val rawTotal = priceCalculator.calculateTotalPrice(order)
-        val roundedTotal = rawTotal.setScale(2, RoundingMode.HALF_UP)
+        val roundedTotal = round(rawTotal * 100) / 100.0
+
         val receipt = paymentGateway.processPayment(PaymentRequest(order.id, roundedTotal))
+        val output = mutableListOf<String>()
 
         output.add("Order ID: ${order.id}")
         output.add("User ID: ${order.userId}")
@@ -30,12 +30,13 @@ class OrderProcessor(
         output.add("Items:")
 
         order.items.forEach { item ->
-            val itemTotal = (item.price * BigDecimal(item.quantity)).setScale(2, RoundingMode.HALF_UP)
-            output.add("  - ${item.productId}: ${item.quantity} x $${item.price} = $$itemTotal")
+            val itemTotal = item.price * item.quantity
+            // Using String.format to ensure 2 decimal places in output
+            output.add(String.format("  - %s: %d x $%.2f = $%.2f", item.productId, item.quantity, item.price, itemTotal))
         }
 
         output.add("")
-        output.add("Total Price: $$roundedTotal")
+        output.add(String.format("Total Price: $%.2f", roundedTotal))
         output.add("Calculator Used: ${priceCalculator::class.simpleName}")
         output.add("")
         output.add("Payment Status: ${receipt.status}")
@@ -46,17 +47,17 @@ class OrderProcessor(
 
         output.add("")
         output.add("=== Processing Complete ===")
+
         return output
     }
 
     override fun run(vararg args: String?) {
-        // Updated to use the nested OrderItem and correct parameter order
         val sampleOrder = Order(
             "ORD-2026-001",
             listOf(
-                Order.OrderItem("LAPTOP-001", 2, BigDecimal("999.99")),
-                Order.OrderItem("MOUSE-042", 6, BigDecimal("29.99")),
-                Order.OrderItem("KEYBOARD-123", 1, BigDecimal("149.99"))
+                Order.OrderItem("LAPTOP-001", 2, 999.99),
+                Order.OrderItem("MOUSE-042", 6, 29.99),
+                Order.OrderItem("KEYBOARD-123", 1, 149.99)
             ),
             "user123"
         )

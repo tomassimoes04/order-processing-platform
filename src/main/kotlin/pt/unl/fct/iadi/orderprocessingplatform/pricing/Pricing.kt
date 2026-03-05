@@ -3,42 +3,32 @@ package pt.unl.fct.iadi.orderprocessingplatform.pricing
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import pt.unl.fct.iadi.orderprocessingplatform.domain.Order
-import java.math.BigDecimal
 
 interface PriceCalculator {
-    fun calculateTotalPrice(order: Order): BigDecimal
+    fun calculateTotalPrice(order: Order): Double
 }
 
-
 @Component
-@ConditionalOnProperty(
-    name = ["pricing.promo.enabled"],
-    havingValue = "false",
-    matchIfMissing = true
-)
+@ConditionalOnProperty(name = ["pricing.promo.enabled"], havingValue = "false", matchIfMissing = true)
 class BasicPriceCalculator : PriceCalculator {
-    override fun calculateTotalPrice(order: Order): BigDecimal {
-        return order.items.fold(BigDecimal.ZERO) { acc, item ->
-            val itemTotal = item.price.multiply(BigDecimal(item.quantity))
-            acc.add(itemTotal)
+    override fun calculateTotalPrice(order: Order): Double {
+        return order.items.fold(0.0) { acc, item ->
+            acc + (item.price * item.quantity)
         }
     }
 }
 
 @Component
-@ConditionalOnProperty(
-    name = ["pricing.promo.enabled"],
-    havingValue = "true"
-)
+@ConditionalOnProperty(name = ["pricing.promo.enabled"], havingValue = "true")
 class PromoPriceCalculator : PriceCalculator {
-    override fun calculateTotalPrice(order: Order): BigDecimal {
-        return order.items.fold(BigDecimal.ZERO) { acc, item ->
+    override fun calculateTotalPrice(order: Order): Double {
+        return order.items.fold(0.0) { acc, item ->
             val itemTotal = if (item.quantity > 5) {
-                item.price.multiply(BigDecimal(item.quantity)).multiply(BigDecimal("0.8"))
+                (item.price * item.quantity) * 0.8
             } else {
-                item.price.multiply(BigDecimal(item.quantity))
+                item.price * item.quantity
             }
-            acc.add(itemTotal)
+            acc + itemTotal
         }
     }
 }
