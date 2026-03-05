@@ -31,7 +31,6 @@ class OrderProcessor(
 
         order.items.forEach { item ->
             val itemTotal = item.price * item.quantity
-            // Using String.format to ensure 2 decimal places in output
             output.add(String.format("  - %s: %d x $%.2f = $%.2f", item.productId, item.quantity, item.price, itemTotal))
         }
 
