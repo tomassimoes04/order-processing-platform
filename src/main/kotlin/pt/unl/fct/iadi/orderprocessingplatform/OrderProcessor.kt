@@ -3,7 +3,6 @@ package pt.unl.fct.iadi.orderprocessingplatform
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
 import pt.unl.fct.iadi.orderprocessingplatform.domain.Order
-import pt.unl.fct.iadi.orderprocessingplatform.domain.OrderItem
 import pt.unl.fct.iadi.orderprocessingplatform.domain.PaymentRequest
 import pt.unl.fct.iadi.orderprocessingplatform.payment.PaymentGateway
 import pt.unl.fct.iadi.orderprocessingplatform.pricing.PriceCalculator
@@ -20,18 +19,13 @@ class OrderProcessor(
 
     fun processOrder(order: Order): List<String> {
         val output = mutableListOf<String>()
-
         val rawTotal = priceCalculator.calculateTotalPrice(order)
         val roundedTotal = rawTotal.setScale(2, RoundingMode.HALF_UP)
-
-        val paymentRequest = PaymentRequest(order.id, roundedTotal)
-        val receipt = paymentGateway.processPayment(paymentRequest)
+        val receipt = paymentGateway.processPayment(PaymentRequest(order.id, roundedTotal))
 
         output.add("Order ID: ${order.id}")
         output.add("User ID: ${order.userId}")
-
-        val timeString = DateTimeFormatter.ISO_INSTANT.format(order.createdAt.atOffset(ZoneOffset.UTC))
-        output.add("Created at: $timeString")
+        output.add("Created at: ${DateTimeFormatter.ISO_INSTANT.format(order.createdAt.atOffset(ZoneOffset.UTC))}")
         output.add("")
         output.add("Items:")
 
@@ -45,35 +39,28 @@ class OrderProcessor(
         output.add("Calculator Used: ${priceCalculator::class.simpleName}")
         output.add("")
         output.add("Payment Status: ${receipt.status}")
+        output.add("Payment Gateway: ${receipt.metadata["gateway"]}")
 
-        val metadata = receipt.metadata
-        output.add("Payment Gateway: ${metadata["gateway"]}")
-
-        if (metadata.containsKey("transactionId")) {
-            output.add("Transaction ID: ${metadata["transactionId"]}")
-        }
-        if (metadata.containsKey("reason")) {
-            output.add("Reason: ${metadata["reason"]}")
-        }
+        receipt.metadata["transactionId"]?.let { output.add("Transaction ID: $it") }
+        receipt.metadata["reason"]?.let { output.add("Reason: $it") }
 
         output.add("")
         output.add("=== Processing Complete ===")
-
         return output
     }
 
     override fun run(vararg args: String?) {
+        // Updated to use the nested OrderItem and correct parameter order
         val sampleOrder = Order(
-            id = "ORD-2026-001",
-            userId = "user123",
-            items = listOf(
-                OrderItem("LAPTOP-001", 2, BigDecimal("999.99")),
-                OrderItem("MOUSE-042", 6, BigDecimal("29.99")), // Quantity > 5 to trigger promo if enabled
-                OrderItem("KEYBOARD-123", 1, BigDecimal("149.99"))
-            )
+            "ORD-2026-001",
+            listOf(
+                Order.OrderItem("LAPTOP-001", 2, BigDecimal("999.99")),
+                Order.OrderItem("MOUSE-042", 6, BigDecimal("29.99")),
+                Order.OrderItem("KEYBOARD-123", 1, BigDecimal("149.99"))
+            ),
+            "user123"
         )
 
-        val result = processOrder(sampleOrder)
-        result.forEach { println(it) }
+        processOrder(sampleOrder).forEach { println(it) }
     }
 }
